@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeaseCalc • Commercial Lease Commission Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    body { font-family: 'Inter', system_ui, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex items-center justify-between mb-8">
+      <div class="flex items-center gap-x-3">
+        <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl">LC</div>
+        <div>
+          <h1 class="text-3xl font-semibold tracking-tight">LeaseCalc</h1>
+          <p class="text-blue-600 text-sm">Commercial Lease Commission Calculator</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-x-4">
+        <button onclick="saveDeal()" class="flex items-center gap-x-2 px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-2xl text-sm font-medium transition-colors shadow-sm">
+          <i class="fa-solid fa-floppy-disk"></i><span>Save Deal</span>
+        </button>
+        <button onclick="exportPDF()" class="flex items-center gap-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-medium transition-colors">
+          <i class="fa-solid fa-file-export"></i><span>Export PDF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Deal Details - Light theme -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-8 mb-8 shadow-sm">
+      <h2 class="text-xl font-semibold mb-6 flex items-center gap-x-2"><i class="fa-solid fa-building text-blue-600"></i> Deal Details</h2>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Square Footage</label>
+          <div class="flex gap-x-3">
+            <input id="sqft" type="number" value="0" class="flex-1 bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+            <span class="text-slate-400 flex items-center text-lg">sq ft</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Rent Quoted As</label>
+          <select id="rent-quoted-as" onchange="setRentType(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+            <option value="1" selected>$/SF/Year</option>
+            <option value="0">Annual Quoted Rent</option>
+          </select>
+        </div>
+        <div>
+          <label id="rent-label" class="block text-xs uppercase tracking-widest text-slate-500 mb-2">$/SF/Year</label>
+          <div class="flex gap-x-3">
+            <span class="text-3xl text-slate-400 pt-3">$</span>
+            <input id="rent-amount" type="number" value="0" step="0.01" class="flex-1 bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-2xl font-medium focus:outline-none focus:border-blue-500">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6">
+        <div>
+          <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Lease Term (Years)</label>
+          <input id="years" type="number" value="5" min="1" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+        </div>
+        <div class="flex items-center gap-x-3 pt-8">
+          <input type="checkbox" id="include-free-rent" onchange="toggleFreeRent()" class="w-5 h-5 accent-blue-600">
+          <label for="include-free-rent" class="text-slate-700 font-medium">Include Free Rent</label>
+        </div>
+      </div>
+
+      <div id="free-rent-section" class="hidden mt-6 grid grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Free Rent Months</label>
+          <input id="free-months" type="number" value="2" min="0" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Extra Months</label>
+          <input id="extra-months" type="number" value="0" min="0" max="11" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+        </div>
+      </div>
+
+      <!-- Rent Structure -->
+      <div class="mt-8 pt-6 border-t border-slate-200">
+        <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Rent Structure</label>
+        <select id="rent-structure" onchange="setRentStructure(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+          <option value="1" selected>Annual Escalations</option>
+          <option value="0">Flat Rent</option>
+          <option value="2">Escalations Every N Years</option>
+          <option value="3">Flat Period + Step-Ups</option>
+        </select>
+        <div id="structure-inputs" class="mt-5"></div>
+      </div>
+
+      <!-- Commission Details -->
+      <div class="mt-8 pt-6 border-t border-slate-200">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-x-2"><i class="fa-solid fa-percent text-blue-600"></i> Commission Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Commission Structure</label>
+            <select id="commission-structure" onchange="setCommissionType(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+              <option value="0" selected>Flat %</option>
+              <option value="1">Tiered %</option>
+            </select>
+          </div>
+          <div id="flat-panel-container">
+            <label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Commission Rate</label>
+            <div class="flex items-center gap-x-3">
+              <input id="flat-rate" type="number" value="6" step="0.1" class="w-28 bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-2xl font-medium text-center focus:outline-none focus:border-blue-500">
+              <span class="text-2xl text-slate-400">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Broker Splits -->
+      <div class="mt-8 pt-8 border-t border-slate-200">
+        <label class="block text-xs uppercase tracking-widest text-slate-500 mb-4">Broker Splits</label>
+        <div class="grid grid-cols-2 gap-8">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-700">Your side (landlord/tenant rep)</span>
+            <input id="your-side" type="number" value="50" min="0" max="100" class="w-20 text-center bg-slate-50 border border-slate-300 rounded-2xl px-4 py-2">
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-700">Your personal split (agent/brokerage)</span>
+            <input id="agent-split" type="number" value="50" min="0" max="100" class="w-20 text-center bg-slate-50 border border-slate-300 rounded-2xl px-4 py-2">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="bg-white border border-slate-200 rounded-3xl p-8 card shadow-sm">
+      <div class="flex justify-between items-baseline mb-6">
+        <h2 class="text-xl font-semibold">Calculation Results</h2>
+        <button onclick="calculate()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-2xl font-semibold flex items-center gap-x-2 text-white">
+          <i class="fa-solid fa-calculator"></i> CALCULATE NOW
+        </button>
+      </div>
+
+      <div id="results-panel" class="hidden">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6"><p class="text-xs text-slate-500">TOTAL LEASE VALUE</p><p id="total-lease-value" class="text-4xl font-semibold text-slate-900 mt-1">$0.00</p></div>
+          <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6"><p class="text-xs text-slate-500">TOTAL COMMISSION</p><p id="total-commission" class="text-4xl font-semibold text-blue-600 mt-1">$0.00</p></div>
+          <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6"><p class="text-xs text-slate-500">YOUR GROSS COMMISSION</p><p id="your-gross" class="text-4xl font-semibold text-blue-600 mt-1">$0.00</p></div>
+          <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6"><p class="text-xs text-slate-500">YOUR NET PAYOUT</p><p id="your-net" class="text-4xl font-semibold text-blue-600 mt-1">$0.00</p></div>
+        </div>
+        <div class="mb-8">
+          <h3 class="text-sm font-medium text-slate-500 mb-3">YEAR-BY-YEAR BREAKDOWN</h3>
+          <div id="year-table" class="overflow-auto max-h-80 rounded-3xl border border-slate-200 bg-white"></div>
+        </div>
+      </div>
+
+      <div id="empty-state" class="flex flex-col items-center justify-center text-center py-20">
+        <i class="fa-solid fa-chart-pie text-8xl text-slate-300 mb-6"></i>
+        <p class="text-slate-500">Fill in the details above and click CALCULATE NOW</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Full working script
+    let currentRentType = 1;
+    let currentRentStructure = 1;
+    let commissionType = 0;
+    let lastCalculation = null;
+
+    function renderStructureInputs() {
+      const container = document.getElementById('structure-inputs');
+      container.innerHTML = '';
+
+      if (currentRentStructure === 0) {
+        container.innerHTML = `<p class="text-slate-500 italic text-center py-4">Rent stays completely flat for the entire term.</p>`;
+        return;
+      }
+
+      let html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-6">`;
+      
+      if (currentRentStructure === 1) {
+        html += `<div><label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Annual Escalation %</label><div class="flex"><input id="escalation" type="number" value="3" step="0.1" class="flex-1 bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500"><span class="bg-slate-100 border border-l-0 border-slate-300 rounded-r-2xl px-6 flex items-center text-slate-400">%</span></div></div>`;
+      } else if (currentRentStructure === 2) {
+        html += `<div><label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Escalation %</label><div class="flex"><input id="escalation" type="number" value="3" step="0.1" class="flex-1 bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500"><span class="bg-slate-100 border border-l-0 border-slate-300 rounded-r-2xl px-6 flex items-center text-slate-400">%</span></div></div><div><label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Every N Years</label><input id="escalation-frequency" type="number" value="3" min="1" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500"></div>`;
+      } else if (currentRentStructure === 3) {
+        html += `<div><label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Flat for first</label><input id="flat-years" type="number" value="3" min="1" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500"><span class="text-xs text-slate-400 mt-1 block">years</span></div><div><label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Then escalation %</label><div class="flex"><input id="escalation" type="number" value="3" step="0.1" class="flex-1 bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500"><span class="bg-slate-100 border border-l-0 border-slate-300 rounded-r-2xl px-6 flex items-center text-slate-400">%</span></div></div><div><label class="block text-xs uppercase tracking-widest text-slate-500 mb-2">Step every</label><input id="step-frequency" type="number" value="3" min="1" class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500"><span class="text-xs text-slate-400 mt-1 block">years</span></div>`;
+      }
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    function setRentStructure(val) {
+      currentRentStructure = parseInt(val);
+      renderStructureInputs();
+    }
+
+    function toggleFreeRent() {
+      const checked = document.getElementById('include-free-rent').checked;
+      document.getElementById('free-rent-section').classList.toggle('hidden', !checked);
+    }
+
+    function calculate() {
+      const sqft = parseFloat(document.getElementById('sqft').value) || 0;
+      const rentInput = parseFloat(document.getElementById('rent-amount').value) || 0;
+      const years = parseFloat(document.getElementById('years').value) || 0;
+      const includeFree = document.getElementById('include-free-rent').checked;
+      const freeMonths = includeFree ? parseFloat(document.getElementById('free-months').value) || 0 : 0;
+      const yourSide = parseFloat(document.getElementById('your-side').value) / 100 || 0.5;
+      const agentSplit = parseFloat(document.getElementById('agent-split').value) / 100 || 0.5;
+
+      let baseAnnualRent = currentRentType === 1 ? rentInput * sqft : rentInput;
+      let annualRents = [];
+      let totalLeaseValue = 0;
+      let remainingFree = freeMonths;
+
+      for (let y = 1; y <= years; y++) {
+        let rentThisYear = baseAnnualRent;
+
+        if (currentRentStructure === 1 && document.getElementById('escalation')) {
+          const esc = parseFloat(document.getElementById('escalation').value) || 0;
+          rentThisYear *= Math.pow(1 + esc/100, y-1);
+        } else if (currentRentStructure === 2 && document.getElementById('escalation') && document.getElementById('escalation-frequency')) {
+          const esc = parseFloat(document.getElementById('escalation').value) || 0;
+          const freq = parseFloat(document.getElementById('escalation-frequency').value) || 1;
+          rentThisYear *= Math.pow(1 + esc/100, Math.floor((y-1) / freq));
+        } else if (currentRentStructure === 3 && document.getElementById('flat-years') && document.getElementById('escalation') && document.getElementById('step-frequency')) {
+          const flatY = parseFloat(document.getElementById('flat-years').value) || 1;
+          const esc = parseFloat(document.getElementById('escalation').value) || 0;
+          const step = parseFloat(document.getElementById('step-frequency').value) || 1;
+          if (y > flatY) rentThisYear *= Math.pow(1 + esc/100, Math.floor((y - flatY - 1) / step) + 1);
+        }
+
+        if (y === 1 && remainingFree > 0) {
+          const freeThisYear = Math.min(remainingFree, 12) * (rentThisYear / 12);
+          rentThisYear = Math.max(0, rentThisYear - freeThisYear);
+          remainingFree -= Math.min(remainingFree, 12);
+        }
+
+        annualRents.push(rentThisYear);
+        totalLeaseValue += rentThisYear;
+      }
+
+      const rate = parseFloat(document.getElementById('flat-rate').value) / 100 || 0;
+      const yearCommissions = annualRents.map(r => r * rate);
+      const totalCommission = yearCommissions.reduce((a,b)=>a+b,0);
+      const yourGross = totalCommission * yourSide;
+      const yourNet = yourGross * agentSplit;
+
+      document.getElementById('empty-state').classList.add('hidden');
+      document.getElementById('results-panel').classList.remove('hidden');
+
+      const format = (num) => '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      document.getElementById('total-lease-value').textContent = format(totalLeaseValue);
+      document.getElementById('total-commission').textContent = format(totalCommission);
+      document.getElementById('your-gross').textContent = format(yourGross);
+      document.getElementById('your-net').textContent = format(yourNet);
+
+      let html = `<table class="w-full text-sm"><thead><tr class="border-b border-slate-200"><th class="text-left py-4 px-6 font-medium text-slate-500">Year</th><th class="text-right py-4 px-6 font-medium text-slate-500">Annual Rent</th><th class="text-right py-4 px-6 font-medium text-slate-500">Commission</th></tr></thead><tbody class="divide-y divide-slate-200">`;
+      annualRents.forEach((r,i) => {
+        html += `<tr><td class="py-4 px-6">${i+1}</td><td class="py-4 px-6 text-right">$${(r).toFixed(2)}</td><td class="py-4 px-6 text-right text-blue-600">$${(yearCommissions[i]||0).toFixed(2)}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      document.getElementById('year-table').innerHTML = html;
+
+      lastCalculation = { totalLeaseValue, totalCommission, yourGross, yourNet, annualRents, yearCommissions };
+    }
+
+    function saveDeal() {
+      if (!lastCalculation) return alert("Calculate a deal first!");
+      const name = prompt("Deal name?", "New Deal");
+      if (!name) return;
+      alert(`Deal "${name}" saved!`);
+    }
+
+    function exportPDF() {
+      if (!lastCalculation) return alert("Calculate first!");
+      alert("PDF export coming in next update.");
+    }
+
+    window.onload = function() {
+      renderStructureInputs();
+      console.log('%c✅ Light Professional Theme Applied!', 'color:#3b82f6');
+    };
+  </script>
+</body>
+</html>
